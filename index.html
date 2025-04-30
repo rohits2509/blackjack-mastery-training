@@ -8,41 +8,13 @@
     body { font-family: sans-serif; padding: 2rem; max-width: 600px; margin: auto; background: #f5f5f5; }
     .card { display: inline-block; padding: 0.5rem 1rem; margin: 0.25rem; border: 1px solid #aaa; background: white; border-radius: 8px; }
     button { margin-top: 1rem; padding: 0.5rem 1.5rem; font-size: 1rem; }
-    #total-selection, #hand-type-selection { margin-bottom: 2rem; }
     #explanation { margin-top: 1rem; font-style: italic; color: #555; }
     #logic { margin-top: 1rem; color: #333; font-weight: bold; }
   </style>
 </head>
 <body>
   <h1>Blackjack Trainer</h1>
-
-  <!-- Total selection buttons -->
-  <div id="total-selection">
-    <button onclick="setTotal(6)">Total = 6</button>
-    <button onclick="setTotal(7)">Total = 7</button>
-    <button onclick="setTotal(8)">Total = 8</button>
-    <button onclick="setTotal(9)">Total = 9</button>
-    <button onclick="setTotal(10)">Total = 10</button>
-    <button onclick="setTotal(11)">Total = 11</button>
-    <button onclick="setTotal(12)">Total = 12</button>
-    <button onclick="setTotal(13)">Total = 13</button>
-    <button onclick="setTotal(14)">Total = 14</button>
-    <button onclick="setTotal(15)">Total = 15</button>
-    <button onclick="setTotal(16)">Total = 16</button>
-    <button onclick="setTotal(17)">Total = 17</button>
-    <button onclick="setTotal(18)">Total = 18</button>
-    <button onclick="setTotal(19)">Total = 19</button>
-    <button onclick="setTotal(20)">Total = 20</button>
-  </div>
-
-  <!-- Hand type selection buttons -->
-  <div id="hand-type-selection">
-    <button onclick="setHandType('soft')">Soft Total</button>
-    <button onclick="setHandType('split')">Pair (Split)</button>
-  </div>
-
   <div id="game"></div>
-  
   <script>
     const CARD_VALUES = {
       '2': 2, '3': 3, '4': 4, '5': 5, '6': 6,
@@ -72,9 +44,6 @@
       'pair,10,6': ['Stand', '20 is excellent. Never split 10s.'],
       'pair,5,6': ['Double', 'Pair of 5s is like a 10. Double against weak dealer.']
     };
-
-    let selectedTotal = 0;
-    let selectedHandType = '';
 
     function drawCard() {
       const cards = Object.keys(CARD_VALUES);
@@ -111,6 +80,7 @@
       const dealerVal = CARD_VALUES[dealerCard];
       let logic = '';
 
+      // Logic for hitting, standing, etc.
       if (suggestedMove === 'Hit') {
         if (value <= 11) logic = 'Your hand is weak, so hitting is needed to improve.';
         else if (value <= 16 && dealerVal >= 7) logic = 'Dealer has a strong hand. You need to hit to improve your chances.';
@@ -130,24 +100,8 @@
       return logic;
     }
 
-    function setTotal(total) {
-      selectedTotal = total;
-      newRound();
-    }
-
-    function setHandType(type) {
-      selectedHandType = type;
-      newRound();
-    }
-
     function newRound() {
-      let playerHand = [drawCard(), drawCard()];
-      
-      // Ensure the player's hand matches the selected total and type
-      while (handValue(playerHand) !== selectedTotal && selectedHandType !== 'split') {
-        playerHand = [drawCard(), drawCard()];
-      }
-
+      const playerHand = [drawCard(), drawCard()];
       const dealerCard = drawCard();
       const value = handValue(playerHand);
       const [suggestion, explanation, logic] = suggestMove(playerHand, dealerCard);
@@ -165,4 +119,18 @@
         </label>
         <button onclick="checkMove('${suggestion}')">Submit</button>
       `;
-      document.getElementById
+      document.getElementById('game').innerHTML = html;
+    }
+
+    function checkMove(correctMove) {
+      const userMove = document.getElementById('move').value;
+      const result = userMove === correctMove
+        ? '<p style="color:green">✅ Correct!</p>'
+        : `<p style="color:red">❌ Incorrect. Correct move was: ${correctMove}</p>`;
+      document.getElementById('game').innerHTML += result + '<button onclick="newRound()">Play Again</button>';
+    }
+
+    newRound();
+  </script>
+</body>
+</html>
