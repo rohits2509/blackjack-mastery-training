@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blackjack Trainer</title>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; max-width: 600px; margin: auto; background: #f5f5f5; }
+    .card { display: inline-block; padding: 0.5rem 1rem; margin: 0.25rem; border: 1px solid #aaa; background: white; border-radius: 8px; }
+    button { margin-top: 1rem; padding: 0.5rem 1.5rem; font-size: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Blackjack Trainer</h1>
+  <div id="game"></div>
+  <script>
+    const CARD_VALUES = {
+      '2': 2, '3': 3, '4': 4, '5': 5, '6': 6,
+      '7': 7, '8': 8, '9': 9, '10': 10,
+      'J': 10, 'Q': 10, 'K': 10, 'A': 11
+    };
+
+    const HINTS = {
+      'hard,8,10': 'Hit', 'hard,9,3': 'Double', 'hard,10,9': 'Double', 'hard,11,6': 'Double',
+      'hard,12,4': 'Stand', 'hard,13,6': 'Stand', 'hard,16,10': 'Hit', 'hard,17,10': 'Stand',
+      'soft,13,5': 'Hit', 'soft,15,6': 'Double', 'soft,17,4': 'Double', 'soft,18,2': 'Stand',
+      'soft,18,7': 'Stand', 'soft,18,9': 'Hit',
+      'pair,2,4': 'Split', 'pair,6,5': 'Split', 'pair,8,10': 'Split', 'pair,9,7': 'Stand',
+      'pair,10,6': 'Stand', 'pair,5,6': 'Double'
+    };
+
+    function drawCard() {
+      const cards = Object.keys(CARD_VALUES);
+      return cards[Math.floor(Math.random() * cards.length)];
+    }
+
+    function handValue(hand) {
+      let total = hand.reduce((sum, card) => sum + CARD_VALUES[card], 0);
+      let aces = hand.filter(card => card === 'A').length;
+      while (total > 21 && aces > 0) {
+        total -= 10;
+        aces--;
+      }
+      return total;
+    }
+
+    function handType(hand) {
+      if (hand.length === 2 && hand[0] === hand[1]) return 'pair';
+      if (hand.includes('A')) return 'soft';
+      return 'hard';
+    }
+
+    function suggestMove(playerHand, dealerCard) {
+      const value = handValue(playerHand);
+      const pType = handType(playerHand);
+      const dealerVal = CARD_VALUES[dealerCard];
+      return HINTS[`${pType},${value},${dealerVal}`] || 'No Hint';
+    }
+
+    function newRound() {
+      const playerHand = [drawCard(), drawCard()];
+      const dealerCard = drawCard();
+      const value = handValue(playerHand);
+      const suggestion = suggestMove(playerHand, dealerCard);
+
+      const html = `
+        <p>Your hand: ${playerHand.map(card => `<span class="card">${card}</span>`).join('')} (value: ${value})</p>
+        <p>Dealer shows: <span class="card">${dealerCard}</span></p>
+        <p><strong>Suggested move: ${suggestion}</strong></p>
+        <label>Your move: 
+          <select id="move">
+            <option>Hit</option><option>Stand</option><option>Split</option><option>Double</option>
+          </select>
+        </label>
+        <button onclick="checkMove('${suggestion}')">Submit</button>
+      `;
+      document.getElementById('game').innerHTML = html;
+    }
+
+    function checkMove(correctMove) {
+      const userMove = document.getElementById('move').value;
+      const result = userMove === correctMove
+        ? '<p style="color:green">✅ Correct!</p>'
+        : `<p style="color:red">❌ Incorrect. Correct move was: ${correctMove}</p>`;
+      document.getElementById('game').innerHTML += result + '<button onclick="newRound()">Play Again</button>';
+    }
+
+    newRound();
+  </script>
+</body>
+</html>
