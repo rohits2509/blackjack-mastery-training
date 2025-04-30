@@ -8,6 +8,8 @@
     body { font-family: sans-serif; padding: 2rem; max-width: 600px; margin: auto; background: #f5f5f5; }
     .card { display: inline-block; padding: 0.5rem 1rem; margin: 0.25rem; border: 1px solid #aaa; background: white; border-radius: 8px; }
     button { margin-top: 1rem; padding: 0.5rem 1.5rem; font-size: 1rem; }
+    #explanation { margin-top: 1rem; font-style: italic; color: #555; }
+    #logic { margin-top: 1rem; color: #333; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -21,12 +23,26 @@
     };
 
     const HINTS = {
-      'hard,8,10': 'Hit', 'hard,9,3': 'Double', 'hard,10,9': 'Double', 'hard,11,6': 'Double',
-      'hard,12,4': 'Stand', 'hard,13,6': 'Stand', 'hard,16,10': 'Hit', 'hard,17,10': 'Stand',
-      'soft,13,5': 'Hit', 'soft,15,6': 'Double', 'soft,17,4': 'Double', 'soft,18,2': 'Stand',
-      'soft,18,7': 'Stand', 'soft,18,9': 'Hit',
-      'pair,2,4': 'Split', 'pair,6,5': 'Split', 'pair,8,10': 'Split', 'pair,9,7': 'Stand',
-      'pair,10,6': 'Stand', 'pair,5,6': 'Double'
+      'hard,8,10': ['Hit', 'You have a weak total of 8. Always hit against a 10.'],
+      'hard,9,3': ['Double', 'You have 9, and dealer shows 3. Great chance to win with one more card.'],
+      'hard,10,9': ['Double', 'You have 10, dealer shows 9. Odds favor doubling down.'],
+      'hard,11,6': ['Double', '11 is strong. Double against weak dealer cards like 6.'],
+      'hard,12,4': ['Stand', 'Dealer showing 4 likely busts. Don’t risk your 12.'],
+      'hard,13,6': ['Stand', 'Dealer likely busts. Stand and let them break.'],
+      'hard,16,10': ['Hit', 'Dealer has 10. Your 16 is too weak to stand.'],
+      'hard,17,10': ['Stand', '17 is too strong to hit. Stand even vs strong dealer.'],
+      'soft,13,5': ['Hit', 'Soft 13 is weak. Hit to improve.'],
+      'soft,15,6': ['Double', 'Soft 15 vs 6: a classic double scenario.'],
+      'soft,17,4': ['Double', 'Soft 17 and dealer 4: time to double down.'],
+      'soft,18,2': ['Stand', 'Soft 18 is solid. Don’t risk vs dealer 2.'],
+      'soft,18,7': ['Stand', 'Soft 18 vs 7: decent hand. Stand.'],
+      'soft,18,9': ['Hit', 'Dealer 9 is strong. Try to improve your 18.'],
+      'pair,2,4': ['Split', 'Always split 2s against 4. Better chance to beat the dealer.'],
+      'pair,6,5': ['Split', 'Split 6s vs 5 to maximize odds.'],
+      'pair,8,10': ['Split', 'Always split 8s, even against strong cards.'],
+      'pair,9,7': ['Stand', '9s are strong. Don’t split vs dealer 7.'],
+      'pair,10,6': ['Stand', '20 is excellent. Never split 10s.'],
+      'pair,5,6': ['Double', 'Pair of 5s is like a 10. Double against weak dealer.']
     };
 
     function drawCard() {
@@ -46,7 +62,7 @@
 
     function handType(hand) {
       if (hand.length === 2 && hand[0] === hand[1]) return 'pair';
-      if (hand.includes('A')) return 'soft';
+      if (hand.includes('A') && handValue(hand) <= 21) return 'soft';
       return 'hard';
     }
 
@@ -54,19 +70,48 @@
       const value = handValue(playerHand);
       const pType = handType(playerHand);
       const dealerVal = CARD_VALUES[dealerCard];
-      return HINTS[`${pType},${value},${dealerVal}`] || 'No Hint';
+      const hint = HINTS[`${pType},${value},${dealerVal}`] || ['No Hint', 'No explanation available for this combination.'];
+      const logic = getLogic(playerHand, dealerCard, hint[0]);
+      return [hint[0], hint[1], logic];
+    }
+
+    function getLogic(playerHand, dealerCard, suggestedMove) {
+      const value = handValue(playerHand);
+      const dealerVal = CARD_VALUES[dealerCard];
+      let logic = '';
+
+      // Logic for hitting, standing, etc.
+      if (suggestedMove === 'Hit') {
+        if (value <= 11) logic = 'Your hand is weak, so hitting is needed to improve.';
+        else if (value <= 16 && dealerVal >= 7) logic = 'Dealer has a strong hand. You need to hit to improve your chances.';
+        else logic = 'You’re in a risky situation, hitting increases your chances of improving your hand.';
+      } else if (suggestedMove === 'Stand') {
+        if (value >= 17) logic = 'Your hand is strong, standing will prevent busting.';
+        else if (dealerVal <= 6) logic = 'Dealer is likely to bust. You should stand and let them fail.';
+        else logic = 'A lower hand value should still stand if the dealer is weak.';
+      } else if (suggestedMove === 'Double') {
+        if (value === 11) logic = 'A double down on 11 increases your odds of winning against weak dealer hands.';
+        else if (value === 9 && dealerVal >= 3 && dealerVal <= 6) logic = 'This is the best time to double down with 9.';
+      } else if (suggestedMove === 'Split') {
+        if (playerHand[0] === '8') logic = 'Always split 8s to have two chances to win, regardless of dealer’s card.';
+        else logic = 'Splitting is a great option when you have pairs against weaker dealer cards.';
+      }
+
+      return logic;
     }
 
     function newRound() {
       const playerHand = [drawCard(), drawCard()];
       const dealerCard = drawCard();
       const value = handValue(playerHand);
-      const suggestion = suggestMove(playerHand, dealerCard);
+      const [suggestion, explanation, logic] = suggestMove(playerHand, dealerCard);
 
       const html = `
         <p>Your hand: ${playerHand.map(card => `<span class="card">${card}</span>`).join('')} (value: ${value})</p>
         <p>Dealer shows: <span class="card">${dealerCard}</span></p>
         <p><strong>Suggested move: ${suggestion}</strong></p>
+        <div id="explanation">Why: ${explanation}</div>
+        <div id="logic">Logic: ${logic}</div>
         <label>Your move: 
           <select id="move">
             <option>Hit</option><option>Stand</option><option>Split</option><option>Double</option>
