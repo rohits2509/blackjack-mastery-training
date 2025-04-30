@@ -8,13 +8,24 @@
     body { font-family: sans-serif; padding: 2rem; max-width: 600px; margin: auto; background: #f5f5f5; }
     .card { display: inline-block; padding: 0.5rem 1rem; margin: 0.25rem; border: 1px solid #aaa; background: white; border-radius: 8px; }
     button { margin-top: 1rem; padding: 0.5rem 1.5rem; font-size: 1rem; }
+    #rule-selection { margin-bottom: 2rem; }
     #explanation { margin-top: 1rem; font-style: italic; color: #555; }
     #logic { margin-top: 1rem; color: #333; font-weight: bold; }
   </style>
 </head>
 <body>
   <h1>Blackjack Trainer</h1>
+  
+  <!-- Rule selection buttons -->
+  <div id="rule-selection">
+    <button onclick="setRule('Hit')">Hit</button>
+    <button onclick="setRule('Stand')">Stand</button>
+    <button onclick="setRule('Double')">Double</button>
+    <button onclick="setRule('Split')">Split</button>
+  </div>
+
   <div id="game"></div>
+  
   <script>
     const CARD_VALUES = {
       '2': 2, '3': 3, '4': 4, '5': 5, '6': 6,
@@ -44,6 +55,8 @@
       'pair,10,6': ['Stand', '20 is excellent. Never split 10s.'],
       'pair,5,6': ['Double', 'Pair of 5s is like a 10. Double against weak dealer.']
     };
+
+    let selectedRule = '';
 
     function drawCard() {
       const cards = Object.keys(CARD_VALUES);
@@ -80,7 +93,6 @@
       const dealerVal = CARD_VALUES[dealerCard];
       let logic = '';
 
-      // Logic for hitting, standing, etc.
       if (suggestedMove === 'Hit') {
         if (value <= 11) logic = 'Your hand is weak, so hitting is needed to improve.';
         else if (value <= 16 && dealerVal >= 7) logic = 'Dealer has a strong hand. You need to hit to improve your chances.';
@@ -100,11 +112,22 @@
       return logic;
     }
 
+    function setRule(rule) {
+      selectedRule = rule;
+      newRound();
+    }
+
     function newRound() {
-      const playerHand = [drawCard(), drawCard()];
+      let playerHand = [drawCard(), drawCard()];
       const dealerCard = drawCard();
       const value = handValue(playerHand);
       const [suggestion, explanation, logic] = suggestMove(playerHand, dealerCard);
+
+      // Filter based on the selected rule
+      if (selectedRule && suggestion !== selectedRule) {
+        // Skip rounds that don’t match the selected rule
+        return newRound();
+      }
 
       const html = `
         <p>Your hand: ${playerHand.map(card => `<span class="card">${card}</span>`).join('')} (value: ${value})</p>
